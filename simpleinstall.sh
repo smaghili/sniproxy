@@ -1,14 +1,27 @@
 #!/bin/bash
 
 # Check if running as root
-if [ "$EUID" -ne 0 ]
-  then echo "Please run as root"
-  exit
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root"
+    exit 1
 fi
 
+# Uninstall previous installation
+echo "Removing previous installation..."
+systemctl stop sniproxy
+systemctl disable sniproxy
+systemctl stop dnsproxy-web-panel.service
+systemctl disable dnsproxy-web-panel.service
+rm -rf /opt/sniproxy
+rm -f /etc/systemd/system/sniproxy.service
+rm -f /etc/systemd/system/dnsproxy-web-panel.service
+rm -rf /var/log/sniproxy
+systemctl daemon-reload
+
+echo "Previous installation removed."
+
 # Check if expect is installed
-if ! command -v expect &> /dev/null
-then
+if ! command -v expect &> /dev/null; then
     echo "expect is not installed. Installing it now..."
     apt-get update
     apt-get install -y expect
@@ -43,3 +56,13 @@ expect eof
 EOF
 
 echo "Installation completed!"
+
+# Get server IP
+SERVER_IP=$(hostname -I | awk '{print $1}')
+
+# Check if sniproxy is running
+if systemctl is-active --quiet sniproxy; then
+    echo "sniproxy is running. sniproxy is now running, you can set up DNS in your clients to $SERVER_IP"
+else
+    echo "Failed to start sniproxy. Please check the logs for more information."
+fi
