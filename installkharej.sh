@@ -148,7 +148,7 @@ fi
 
 # Check the status of sniproxy service
 if systemctl is-active --quiet sniproxy.service; then
-    echo "DNS service is successfully running on port 53."
+    echo "DNS service is successfully running on 0.0.0.0:53 "
 else
     echo "Failed to start DNS service."
 fi
