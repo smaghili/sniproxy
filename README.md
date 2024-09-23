@@ -107,9 +107,10 @@ bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/instal
    ```
      
    - در سرور خارج:
-     ```
-     ./installkharej.sh
-     ```
+
+   ```
+   ./installkharej.sh
+   ```
 
 ### بررسی نصب:
 - در سرور ایران، پیامی مشابه زیر نشان دهنده نصب موفق است:
