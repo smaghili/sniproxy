@@ -104,9 +104,13 @@ EOL
 
 echo "Updated sniproxy.yaml"
 
-# Install required Python packages
-apt install -y python3-pip
-pip3 install flask PyYAML
+# Check if Python packages are already installed
+if ! pip3 list | grep -q "Flask"; then
+    echo "Installing required Python packages..."
+    pip3 install flask PyYAML
+else
+    echo "Required Python packages are already installed."
+fi
 
 # Create systemd service file
 cat > /etc/systemd/system/dnsproxy-web-panel.service <<EOL
@@ -129,4 +133,19 @@ systemctl daemon-reload
 systemctl enable dnsproxy-web-panel
 systemctl start dnsproxy-web-panel
 
-echo "DNS Proxy Web Panel service has been set up and started."
+# Check the status of dnsproxy-web-panel service
+if systemctl is-active --quiet dnsproxy-web-panel.service; then
+    SERVER_IP=$(hostname -I | awk '{print $1}')
+    echo "Web Panel Running on http://$SERVER_IP:5000"
+else
+    echo "Failed to start DNS Proxy Web Panel service."
+fi
+
+# Check the status of sniproxy service
+if systemctl is-active --quiet sniproxy.service; then
+    echo "DNS service is successfully running on port 53."
+else
+    echo "Failed to start DNS service."
+fi
+
+echo "Setup completed!"
