@@ -59,15 +59,54 @@
 
 ## 4. نصب DNS پروکسی
 
-### نصب در سرور ایران:
+### روش اول: نصب از طریق GitHub
+
+#### نصب در سرور ایران:
 ```
 bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/simpleinstall.sh)
 ```
 
-### نصب در سرور خارج:
+#### نصب در سرور خارج:
 ```
 bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/installkharej.sh)
 ```
+
+### روش دوم: نصب از طریق فایل
+
+این مراحل را در هر دو سرور ایران و خارج انجام دهید:
+
+1. انتقال فایل:
+   - فایل زیپ تحویلی را به هر دو سرور ایران و خارج منتقل کنید. ترجیحاً در روت سرور قرار دهید.
+
+2. نصب unzip (در صورت نیاز):
+   ```
+   apt install unzip
+   ```
+
+3. استخراج فایل‌ها:
+   ```
+   unzip sniproxy.zip
+   ```
+
+4. اعطای مجوز اجرا:
+   ```
+   chmod +x -R sniproxy-master
+   ```
+
+5. ورود به پوشه پروژه:
+   ```
+   cd sniproxy-master
+   ```
+
+6. اجرای اسکریپت نصب:
+   - در سرور ایران:
+     ```
+     ./simpleinstall.sh
+     ```
+   - در سرور خارج:
+     ```
+     ./installkharej.sh
+     ```
 
 ### بررسی نصب:
 - در سرور ایران، پیامی مشابه زیر نشان دهنده نصب موفق است:
