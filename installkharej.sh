@@ -105,9 +105,14 @@ EOL
 echo "Updated sniproxy.yaml"
 
 # Check if Python packages are already installed
-if ! pip3 list | grep -q "Flask"; then
+if ! pip3 list | grep -q "Flask" || ! pip3 list | grep -q "PyYAML"; then
     echo "Installing required Python packages..."
-    pip3 install flask PyYAML
+    pip3 install flask PyYAML >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "Required Python packages have been installed successfully."
+    else
+        echo "Failed to install required Python packages."
+    fi
 else
     echo "Required Python packages are already installed."
 fi
