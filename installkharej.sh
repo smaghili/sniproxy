@@ -1,18 +1,29 @@
 #!/bin/bash
 
 # Check if running as root
-if [ "$EUID" -ne 0 ]
-  then echo "Please run as root"
-  exit
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root"
+    exit 1
 fi
 
-# Check if expect is installed
-if ! command -v expect &> /dev/null
-then
-    echo "expect is not installed. Installing it now..."
-    apt-get update
-    apt-get install -y expect
-fi
+# Function to install package if not already installed
+install_if_not_exists() {
+    if ! command -v $1 &> /dev/null; then
+        echo "$1 is not installed. Installing it now..."
+        apt-get update
+        apt-get install -y $1
+    else
+        echo "$1 is already installed."
+    fi
+}
+
+# Install necessary packages
+install_if_not_exists expect
+install_if_not_exists python3-pip
+
+# Install required Python packages
+echo "Installing required Python packages..."
+pip3 install flask PyYAML
 
 # Run the install script with expect
 expect <<EOF
@@ -104,10 +115,6 @@ EOL
 
 echo "Updated sniproxy.yaml"
 
-# Install required Python packages
-apt install -y python3-pip
-pip3 install flask PyYAML
-
 # Create systemd service file
 cat > /etc/systemd/system/dnsproxy-web-panel.service <<EOL
 [Unit]
@@ -124,9 +131,40 @@ Environment=FLASK_APP=/opt/sniproxy/web_panel.py
 WantedBy=multi-user.target
 EOL
 
-# Reload systemd, enable and start the service
+# Reload systemd, enable and start the services
 systemctl daemon-reload
 systemctl enable dnsproxy-web-panel
 systemctl start dnsproxy-web-panel
+systemctl enable sniproxy
+systemctl start sniproxy
 
-echo "DNS Proxy Web Panel service has been set up and started."
+# Function to check service status
+check_service_status() {
+    if systemctl is-active --quiet $1; then
+        echo "$2 is active and running."
+        return 0
+    else
+        echo "$2 failed to start or is not running."
+        journalctl -u $1 --no-pager -n 10
+        return 1
+    fi
+}
+
+# Check the status of services
+SERVER_IP=$(hostname -I | awk '{print $1}')
+
+check_service_status dnsproxy-web-panel.service "Web Panel"
+if [ $? -eq 0 ]; then
+    echo "Web Panel Running on http://$SERVER_IP:5000"
+else
+    echo "Failed to start Web Panel. Check the logs above for more information."
+fi
+
+check_service_status sniproxy.service "DNS service"
+if [ $? -eq 0 ]; then
+    echo "DNS service is successfully running on 0.0.0.0:53"
+else
+    echo "Failed to start DNS service. Check the logs above for more information."
+fi
+
+echo "Setup completed!"
