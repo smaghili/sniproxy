@@ -6,6 +6,17 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Uninstall previous installation
+echo "Removing previous installation..."
+systemctl stop sniproxy
+systemctl disable sniproxy
+systemctl stop dnsproxy-web-panel.service
+systemctl disable dnsproxy-web-panel.service
+rm -rf /opt/sniproxy
+rm -f /etc/systemd/system/sniproxy.service
+rm -f /etc/systemd/system/dnsproxy-web-panel.service
+systemctl daemon-reload
+
 # Function to install package if not already installed
 install_if_not_exists() {
     if ! command -v $1 &> /dev/null; then
@@ -23,7 +34,19 @@ install_if_not_exists python3-pip
 
 # Install required Python packages
 echo "Installing required Python packages..."
-pip3 install flask PyYAML
+pip3 install flask PyYAML requests
+
+# Verify Python packages are installed
+for package in flask PyYAML requests; do
+    if ! pip3 show $package > /dev/null 2>&1; then
+        echo "Error: $package is not installed. Trying to install..."
+        pip3 install $package
+        if [ $? -ne 0 ]; then
+            echo "Failed to install $package. Please install it manually and run the script again."
+            exit 1
+        fi
+    fi
+done
 
 # Run the install script with expect
 expect <<EOF
@@ -51,6 +74,7 @@ echo "Installation completed!"
 
 # Copy required files
 echo "Copying required files..."
+mkdir -p /opt/sniproxy
 cd /opt/sniproxy/
 curl -O https://raw.githubusercontent.com/smaghili/sniproxy/master/web_panel.py
 curl -O https://raw.githubusercontent.com/smaghili/sniproxy/master/domains.csv
@@ -115,7 +139,22 @@ EOL
 
 echo "Updated sniproxy.yaml"
 
-# Create systemd service file
+# Create systemd service file for sniproxy
+cat > /etc/systemd/system/sniproxy.service <<EOL
+[Unit]
+Description=SNI Proxy
+After=network.target
+
+[Service]
+ExecStart=/opt/sniproxy/sniproxy --config /opt/sniproxy/sniproxy.yaml
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOL
+
+# Create systemd service file for web panel
 cat > /etc/systemd/system/dnsproxy-web-panel.service <<EOL
 [Unit]
 Description=DNS Proxy Web Panel
@@ -133,15 +172,14 @@ EOL
 
 # Reload systemd, enable and start the services
 systemctl daemon-reload
-systemctl enable dnsproxy-web-panel
-systemctl start dnsproxy-web-panel
 systemctl enable sniproxy
 systemctl start sniproxy
+systemctl enable dnsproxy-web-panel
+systemctl start dnsproxy-web-panel
 
 # Function to check service status
 check_service_status() {
     if systemctl is-active --quiet $1; then
-        echo "$2 is active and running."
         return 0
     else
         echo "$2 failed to start or is not running."
@@ -150,21 +188,20 @@ check_service_status() {
     fi
 }
 
-# Check the status of services
+# Get server IP
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
-check_service_status dnsproxy-web-panel.service "Web Panel"
-if [ $? -eq 0 ]; then
+# Check the status of services
+if check_service_status sniproxy.service "SNI Proxy"; then
+    echo "sniproxy is now running, you can set up DNS in your clients to $SERVER_IP"
+else
+    echo "Failed to start SNI Proxy. Check the logs above for more information."
+fi
+
+if check_service_status dnsproxy-web-panel.service "Web Panel"; then
     echo "Web Panel Running on http://$SERVER_IP:5000"
 else
     echo "Failed to start Web Panel. Check the logs above for more information."
-fi
-
-check_service_status sniproxy.service "DNS service"
-if [ $? -eq 0 ]; then
-    echo "DNS service is successfully running on 0.0.0.0:53"
-else
-    echo "Failed to start DNS service. Check the logs above for more information."
 fi
 
 echo "Setup completed!"
