@@ -6,5 +6,5 @@ bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/simple
 
 ## Install and Usage in Kharej Server
 ```javascript
-bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/simpleinstall.sh)
+bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/installkharej.sh)
 ```
