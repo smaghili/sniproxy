@@ -84,9 +84,12 @@ bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/instal
   Setup completed!
   ```
 
-### دسترسی به پنل مدیریت:
-- آدرس: `http://[YOUR_IP_SERVER]:5000`
+### آدرس دسترسی به پنل مدیریت:
+```
+http://[YOUR_IP_SERVER]:5000
+```
 (به جای [YOUR_IP_SERVER] باید IP سرور خارج خود را وارد کنید)
+
 - نام کاربری: `admin`
 - رمز عبور: `password`
 
