@@ -100,9 +100,12 @@ bash <(curl -L https://raw.githubusercontent.com/smaghili/sniproxy/master/instal
 
 6. اجرای اسکریپت نصب:
    - در سرور ایران:
-     ```
-     ./simpleinstall.sh
-     ```
+
+
+   ```
+   ./simpleinstall.sh
+   ```
+     
    - در سرور خارج:
      ```
      ./installkharej.sh
