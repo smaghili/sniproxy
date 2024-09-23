@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS Proxy Management Panel</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f4f4f4; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background-color: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+        }
+        .header {
+            position: relative;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        h1 { 
+            color: #333; 
+            margin: 0;
+            display: inline-block;
+        }
+        h2 {
+            margin-top: 20px;
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 15px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        .start { background-color: #4CAF50; }
+        .stop { background-color: #f44336; }
+        .restart { background-color: #ff9800; }
+        .mode { background-color: #2196F3; }
+        .update-button { 
+            background-color: #3498db;
+        }
+        .logout-button {
+            background-color: #f44336;
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        textarea { 
+            width: 100%; 
+            height: 200px; 
+            margin-bottom: 10px; 
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        .status-panel {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .status-label {
+            font-weight: bold;
+            margin-right: 10px;
+            width: 120px;
+        }
+        .status-value {
+            padding: 5px 10px;
+            border-radius: 15px;
+            color: white;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 100px;
+            text-align: center;
+        }
+        .running { background-color: #4CAF50; }
+        .stopped { background-color: #f44336; }
+        .whitelist { background-color: #2196F3; }
+        .dns-allow-all { background-color: #FF9800; }
+        .unknown { background-color: #9E9E9E; }
+        .active { background-color: #4CAF50; }
+        .inactive { background-color: #f44336; }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .ip-restriction-active { 
+            background-color: #4CAF50;
+        }
+        .ip-restriction-inactive { 
+            background-color: #f44336;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DNS Proxy Management Panel</h1>
+            <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="status-panel">
+            <div class="status-item">
+                <span class="status-label">Status:</span>
+                <span id="status-value" class="status-value"></span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Mode:</span>
+                <span id="mode-value" class="status-value"></span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">IP Restriction:</span>
+                <span id="ip-restriction-value" class="status-value"></span>
+            </div>
+        </div>
+        <div class="button-group">
+            <button class="start" onclick="toggleService('start')">Start</button>
+            <button class="stop" onclick="toggleService('stop')">Stop</button>
+            <button class="restart" onclick="toggleService('restart')">Restart</button>
+            <button class="mode" onclick="toggleService('start', 'whitelist')">Start Whitelist Mode</button>
+            <button class="mode" onclick="toggleService('start', 'dns-allow-all')">Start DNS Allow All Mode</button>
+            <button id="ip-restriction-toggle" onclick="toggleIPRestriction()">Toggle IP Restriction</button>
+        </div>
+        
+        <div class="section">
+            <h2>Whitelist Domains</h2>
+            <textarea id="whitelist"></textarea>
+            <button class="update-button" onclick="updateWhitelist()">Update Whitelist</button>
+        </div>
+        
+        <div class="section">
+            <h2>Allowed IPs</h2>
+            <textarea id="allowed_ips"></textarea>
+            <button class="update-button" onclick="updateAllowedIPs()">Update Allowed IPs</button>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(type, text) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = 'message ' + type;
+            messageDiv.textContent = text;
+            messageDiv.style.display = 'block';
+
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusValue = document.getElementById('status-value');
+                    const modeValue = document.getElementById('mode-value');
+                    const ipRestrictionValue = document.getElementById('ip-restriction-value');
+                    const ipRestrictionToggle = document.getElementById('ip-restriction-toggle');
+                    
+                    if (data.status === 'active') {
+                        statusValue.textContent = 'Running';
+                        statusValue.className = 'status-value running';
+                    } else {
+                        statusValue.textContent = 'Stopped';
+                        statusValue.className = 'status-value stopped';
+                    }
+                    
+                    modeValue.textContent = data.mode;
+                    modeValue.className = 'status-value ' + (data.mode === 'Whitelist' ? 'whitelist' : 'dns-allow-all');
+
+                    if (data.ip_restriction === 'ACTIVE') {
+                        ipRestrictionValue.textContent = 'Enabled';
+                        ipRestrictionValue.className = 'status-value active';
+                        ipRestrictionToggle.textContent = 'Disable IP Restriction';
+                        ipRestrictionToggle.className = 'ip-restriction-active';
+                    } else {
+                        ipRestrictionValue.textContent = 'Disabled';
+                        ipRestrictionValue.className = 'status-value inactive';
+                        ipRestrictionToggle.textContent = 'Enable IP Restriction';
+                        ipRestrictionToggle.className = 'ip-restriction-inactive';
+                    }
+                });
+        }
+
+        function toggleService(action, mode) {
+            fetch('/api/toggle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: action, mode: mode})
+            })
+            .then(response => {
+                if(response.ok){
+                    setTimeout(() => {
+                        updateStatus();
+                        showMessage('success', 'Service toggled successfully');
+                    }, 1000);
+                } else {
+                    showMessage('error', 'Failed to toggle service');
+                }
+            })
+            .catch(() => {
+                showMessage('error', 'An error occurred while toggling service');
+            });
+        }
+
+        function toggleIPRestriction() {
+            const ipRestrictionValue = document.getElementById('ip-restriction-value');
+            const action = ipRestrictionValue.textContent === 'Enabled' ? 'disable' : 'enable';
+            
+            fetch('/api/toggle_ip_restriction', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: action})
+            })
+            .then(response => {
+                if(response.ok){
+                    updateStatus();
+                    showMessage('success', action === 'enable' ? 'IP Restriction has been enabled' : 'IP Restriction has been disabled');
+                } else {
+                    showMessage('error', 'Failed to toggle IP Restriction');
+                }
+            })
+            .catch(() => {
+                showMessage('error', 'An error occurred while toggling IP Restriction');
+            });
+        }
+
+        function updateWhitelist() {
+            const domains = document.getElementById('whitelist').value.split('\n');
+            fetch('/api/whitelist', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({domains: domains})
+            })
+            .then(response => {
+                if(response.ok){
+                    showMessage('success', 'Whitelist updated and service restarted');
+                } else {
+                    showMessage('error', 'Failed to update whitelist');
+                }
+            })
+            .catch(() => {
+                showMessage('error', 'An error occurred while updating whitelist');
+            });
+        }
+
+        function updateAllowedIPs() {
+            const ips = document.getElementById('allowed_ips').value.split('\n');
+            fetch('/api/allowed_ips', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ips: ips})
+            })
+            .then(response => {
+                if(response.ok){
+                    showMessage('success', 'Allowed IPs updated and service restarted');
+                } else {
+                    showMessage('error', 'Failed to update Allowed IPs');
+                }
+            })
+            .catch(() => {
+                showMessage('error', 'An error occurred while updating Allowed IPs');
+            });
+        }
+
+        function logout() {
+            window.location.href = '/logout';
+        }
+
+        updateStatus();
+        fetch('/api/whitelist').then(response => response.json()).then(data => {
+            document.getElementById('whitelist').value = data.domains.join('\n');
+        });
+        fetch('/api/allowed_ips').then(response => response.json()).then(data => {
+            document.getElementById('allowed_ips').value = data.ips.join('\n');
+        });
+
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>

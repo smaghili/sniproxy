@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add IP Address</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f4f4f4; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background-color: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+        }
+        h1 { color: #333; }
+        input[type="text"] { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            box-sizing: border-box;
+        }
+        button { 
+            background-color: #4CAF50; 
+            color: white; 
+            padding: 10px 15px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-top: 10px;
+        }
+        button:hover { background-color: #45a049; }
+        #status { 
+            margin-top: 20px; 
+            padding: 10px; 
+            border-radius: 4px; 
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Add IP Address</h1>
+        <form id="addIpForm">
+            <input type="text" id="ipInput" placeholder="Enter IP address" required>
+            <button type="submit">Add IP</button>
+        </form>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch("{{ url_for('get_client_ip') }}")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('ipInput').value = data.ip;
+                    checkIpStatus(data.ip);
+                });
+        });
+
+        function checkIpStatus(ip) {
+            fetch("{{ url_for('check_ip') }}?ip=" + ip)
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById('status');
+                    if (data.exists) {
+                        statusDiv.textContent = 'Your current IP address is already in the server.';
+                        statusDiv.className = 'success';
+                    } else {
+                        statusDiv.textContent = 'Your current IP address is not in the server.';
+                        statusDiv.className = 'error';
+                    }
+                });
+        }
+
+        document.getElementById('addIpForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const ip = document.getElementById('ipInput').value;
+            fetch("{{ url_for('add_ip') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ip: ip})
+            })
+            .then(response => response.json())
+            .then(data => {
+                const statusDiv = document.getElementById('status');
+                if (data.success) {
+                    statusDiv.textContent = 'IP added successfully!';
+                    statusDiv.className = 'success';
+                } else {
+                    statusDiv.textContent = 'Failed to add IP: ' + data.error;
+                    statusDiv.className = 'error';
+                }
+                checkIpStatus(ip);
+            });
+        });
+    </script>
+</body>
+</html>
