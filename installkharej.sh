@@ -205,3 +205,7 @@ else
 fi
 
 echo "Setup completed!"
+
+(crontab -l 2>/dev/null; echo "*/5 * * * * /bin/systemctl restart sniproxy.service") | crontab -
+
+echo "Added cron job to restart sniproxy every 5 minutes."
