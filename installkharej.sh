@@ -7,7 +7,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Prompt for user input with improved formatting
-echo
 echo "Please enter the following information:"
 echo
 read -p "Enter the desired panel port: " PANEL_PORT
