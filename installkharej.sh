@@ -5,6 +5,8 @@ if [ "$EUID" -ne 0 ]; then
     echo "Please run as root"
     exit 1
 fi
+systemctl stop dnsproxy-web-panel.service
+systemctl disable dnsproxy-web-panel.service
 
 # Prompt for user input with improved formatting
 echo "Please enter the following information:"
