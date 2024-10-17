@@ -6,10 +6,16 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Prompt for user input
+# Prompt for user input with improved formatting
+echo
+echo "Please enter the following information:"
+echo
 read -p "Enter the desired panel port: " PANEL_PORT
+echo
 read -p "Enter the admin username: " ADMIN_USERNAME
+echo
 read -s -p "Enter the admin password: " ADMIN_PASSWORD
+echo
 echo
 
 # Uninstall previous installation
