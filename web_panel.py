@@ -4,6 +4,7 @@ import subprocess
 import os
 from functools import wraps
 import requests
+import getpass
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Change this to a secure random key
@@ -13,9 +14,10 @@ WHITELIST_FILE = f"{INSTALL_DIR}/domains.csv"
 ALLOWED_IPS_FILE = f"{INSTALL_DIR}/cidr.csv"
 SNIPROXY_CONFIG = f"{INSTALL_DIR}/sniproxy.yaml"
 
-# Replace this with a secure method to store and validate credentials
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "password"  # Change this to a strong password
+# Get panel port, username and password from user input
+PANEL_PORT = int(input("Enter the panel port: "))
+ADMIN_USERNAME = input("Enter the admin username: ")
+ADMIN_PASSWORD = getpass.getpass("Enter the admin password: ")
 
 def login_required(f):
     @wraps(f)
@@ -266,4 +268,4 @@ def get_public_ip():
         return jsonify({'error': f'Request failed: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=PANEL_PORT)
