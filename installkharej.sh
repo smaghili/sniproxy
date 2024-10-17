@@ -6,6 +6,12 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Prompt for user input
+read -p "Enter the desired panel port: " PANEL_PORT
+read -p "Enter the admin username: " ADMIN_USERNAME
+read -s -p "Enter the admin password: " ADMIN_PASSWORD
+echo
+
 # Uninstall previous installation
 echo "Removing previous installation..."
 systemctl stop sniproxy
@@ -165,10 +171,20 @@ ExecStart=/usr/bin/python3 /opt/sniproxy/web_panel.py
 Restart=always
 User=root
 Environment=FLASK_APP=/opt/sniproxy/web_panel.py
+Environment=PANEL_PORT=$PANEL_PORT
+Environment=ADMIN_USERNAME=$ADMIN_USERNAME
+Environment=ADMIN_PASSWORD=$ADMIN_PASSWORD
 
 [Install]
 WantedBy=multi-user.target
 EOL
+
+# Modify web_panel.py to use environment variables
+sed -i '1i import os' /opt/sniproxy/web_panel.py
+sed -i 's/app.secret_key = .*/app.secret_key = os.urandom(24)/' /opt/sniproxy/web_panel.py
+sed -i "s/ADMIN_USERNAME = .*/ADMIN_USERNAME = os.environ['ADMIN_USERNAME']/" /opt/sniproxy/web_panel.py
+sed -i "s/ADMIN_PASSWORD = .*/ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']/" /opt/sniproxy/web_panel.py
+sed -i "s/app.run(host='0.0.0.0', port=5000)/app.run(host='0.0.0.0', port=int(os.environ['PANEL_PORT']))/" /opt/sniproxy/web_panel.py
 
 # Reload systemd, enable and start the services
 systemctl daemon-reload
@@ -199,7 +215,7 @@ else
 fi
 
 if check_service_status dnsproxy-web-panel.service "Web Panel"; then
-    echo "Web Panel Running on http://$SERVER_IP:5000"
+    echo "Web Panel Running on http://$SERVER_IP:$PANEL_PORT"
 else
     echo "Failed to start Web Panel. Check the logs above for more information."
 fi
