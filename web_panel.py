@@ -1,23 +1,22 @@
+import os
 import yaml
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import subprocess
-import os
 from functools import wraps
 import requests
-import getpass
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Change this to a secure random key
+app.secret_key = os.urandom(24)  # Use a random secret key for better security
 
 INSTALL_DIR = "/opt/sniproxy"
 WHITELIST_FILE = f"{INSTALL_DIR}/domains.csv"
 ALLOWED_IPS_FILE = f"{INSTALL_DIR}/cidr.csv"
 SNIPROXY_CONFIG = f"{INSTALL_DIR}/sniproxy.yaml"
 
-# Get panel port, username and password from user input
-PANEL_PORT = int(input("Enter the panel port: "))
-ADMIN_USERNAME = input("Enter the admin username: ")
-ADMIN_PASSWORD = getpass.getpass("Enter the admin password: ")
+# Get panel port, username and password from environment variables
+PANEL_PORT = int(os.environ.get('PANEL_PORT', 5000))
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'password')
 
 def login_required(f):
     @wraps(f)
